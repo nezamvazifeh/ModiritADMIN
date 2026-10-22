@@ -51,6 +51,7 @@ dialog{border:1px solid var(--ln);border-radius:10px;background:var(--sf);color:
 <script>
 /* ====== تنظیم: شناسه bucket خود را در KVdb اینجا بگذارید ====== */
 var BUCKET="PUT_YOUR_BUCKET_ID";
+try{var hb=(location.hash.match(/b=([\w-]+)/)||[])[1];if(hb){localStorage.setItem("asnad_b",hb);history.replaceState(null,"",location.pathname)}if(BUCKET.indexOf("PUT_")==0)BUCKET=localStorage.getItem("asnad_b")||BUCKET}catch(e){}
 /* ================================================================ */
 
 var TYPES=["کارشناسی","کاردانی","گواهینامه","دیپلم","ریز نمرات","سایر"];
@@ -85,8 +86,15 @@ function name(u){var x=S.users.filter(function(a){return a.u==u})[0];return x?x.
 function shrink(f,cb){if(!f){cb("");return}var im=new Image();im.onload=function(){var k=Math.min(1,800/Math.max(im.width,im.height)),c=document.createElement("canvas");c.width=im.width*k;c.height=im.height*k;c.getContext("2d").drawImage(im,0,0,c.width,c.height);cb(c.toDataURL("image/jpeg",.65))};im.onerror=function(){cb("")};im.src=URL.createObjectURL(f)}
 
 /* ---------- شروع، ورود، خروج ---------- */
+function setupH(){$("app").innerHTML='<div class="card login"><h2>تنظیم اولیه</h2><p>برای ذخیره مشترک اطلاعات، یک bucket در KVdb لازم است. ایمیل خود را بنویس تا ساخته شود (فقط یک بار).</p><label>ایمیل</label><input id="se" type="email" dir="ltr" autocapitalize="off"><div style="margin-top:14px"><button onclick="mkBucket()">ساخت bucket</button></div><p id="sm" class="hint"></p><hr><label>یا اگر شناسه داری اینجا بگذار</label><input id="sb" dir="ltr" autocapitalize="off"><div style="margin-top:10px"><button class="s" onclick="useB($(\'sb\').value.trim())">استفاده از این شناسه</button></div></div>'}
+async function mkBucket(){var e=$("se").value.trim();if(!e){$("sm").textContent="ایمیل را وارد کنید.";return}$("sm").textContent="در حال ساخت…";
+ try{var r=await fetch("https://kvdb.io",{method:"POST",body:"email="+encodeURIComponent(e),headers:{"Content-Type":"application/x-www-form-urlencoded"}});var t=(await r.text()).trim();
+  if(!r.ok||!/^[\w-]{6,40}$/.test(t)){$("sm").textContent="ساخت انجام نشد: "+t.slice(0,120);return}
+  $("sm").innerHTML='شناسه bucket: <b dir="ltr">'+esc(t)+'</b><br>لینک برای باز کردن روی هر دستگاه (یک بار کافی است):<br><span dir="ltr" style="word-break:break-all">'+esc(location.origin+location.pathname)+'#b='+esc(t)+'</span><br><button class="sm" style="margin-top:8px" onclick="useB(\''+t+'\')">استفاده روی همین دستگاه</button>'
+ }catch(x){$("sm").textContent="ارتباط با KVdb برقرار نشد (احتمالاً فیلتر یا محدودیت مرورگر)."}}
+function useB(b){if(!/^[\w-]{4,60}$/.test(b)){alert("شناسه معتبر نیست.");return}try{localStorage.setItem("asnad_b",b)}catch(e){}BUCKET=b;boot()}
 async function boot(){
- if(!BUCKET||BUCKET.indexOf("PUT_")==0){$("app").innerHTML='<div class="card login"><h2>تنظیم اولیه</h2><p>شناسه bucket در ابتدای کد (متغیر BUCKET) وارد نشده است.</p></div>';return}
+ if(!BUCKET||BUCKET.indexOf("PUT_")==0){setupH();return}
  $("app").innerHTML='<p class="empty">در حال بارگذاری…</p>';
  try{var u=await kget("users");if(!u){u=SEED;await kput("users",u)}S.users=u;
   var s=null;try{s=localStorage.getItem("asnad_u")}catch(e){}
